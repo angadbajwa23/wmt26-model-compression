@@ -1,23 +1,11 @@
 #!/usr/bin/env python
-#
-# 2025-05-09: Initial version by TG Gowda
-# 2025-08-17:  add support for source only wmt25 testsets
-#
-"""
-Setup script for WMT25 models
-
-This script downloads models and development sets for WMT25 Model Compression Shared Task.
-For constrained task, the setup should work out of the box.
-For the unconstrained task, participants may tweak this to download their own models.
-"""
+"""Prepare local evaluation data for WMT26 model-compression runs."""
 
 import argparse
 import logging as LOG
 from pathlib import Path
 
-from transformers import AutoModelForCausalLM, AutoTokenizer
-
-from modelzip.config import DEF_LANG_PAIRS, HF_CACHE, TASK_CONF, WORK_DIR
+from modelzip.config import DEF_LANG_PAIRS, TASK_CONF, WORK_DIR, normalize_lang_pair
 
 LOG.basicConfig(level=LOG.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
@@ -27,9 +15,8 @@ def setup_eval(work_dir: Path, langs=None):
     work_dir.mkdir(parents=True, exist_ok=True)
     tests_dir = work_dir / "tests"
     tests_dir.mkdir(parents=True, exist_ok=True)
-    langs = langs or DEF_LANG_PAIRS
+    langs = [normalize_lang_pair(lang) for lang in (langs or DEF_LANG_PAIRS)]
     for lang_pair in langs:
-        assert lang_pair in TASK_CONF["langs"], f"Language pair {lang_pair} not in config"
         src, tgt = lang_pair.split("-")
         lang_dir = tests_dir / lang_pair
         lang_dir.mkdir(parents=True, exist_ok=True)
@@ -37,98 +24,53 @@ def setup_eval(work_dir: Path, langs=None):
             src_file = lang_dir / f"{test_name}.{src}-{tgt}.{src}"
             ref_file = lang_dir / f"{test_name}.{src}-{tgt}.{tgt}"
             meta_file = lang_dir / f"{test_name}.{src}-{tgt}.meta"
-            if (
-                src_file.exists()
-                and ref_file.exists()
-                and src_file.stat().st_size > 0
-                and ref_file.stat().st_size > 0
-            ):
-                LOG.info(f"Test files exist for {lang_pair}:{test_name}")
+            if src_file.exists() and src_file.stat().st_size > 0 and (ref_file.exists() or meta_file.exists()):
+                LOG.info("Test files exist for %s:%s", lang_pair, test_name)
                 continue
-            LOG.info(f"Fetching {test_name} via: {get_fn}")
+            LOG.info("Fetching %s via: %s", test_name, get_fn)
             lines = get_fn()
             assert isinstance(lines, list), f"Expected list of lines, got {type(lines)}"
             assert len(lines) > 0, f"No lines returned for {test_name} in {lang_pair}"
             if isinstance(lines[0], str):
-                src_file.write_text("\n".join(lines))
-                LOG.info(f"Created test files {src_file}; NOTE: refs are missing")
+                src_file.write_text("\n".join(lines), encoding="utf-8")
+                LOG.info("Created source file %s; refs are missing", src_file)
             elif isinstance(lines[0], (list, tuple)):
                 n_fields = len(lines[0])
                 srcs = [x[0] for x in lines]
-                src_file.write_text("\n".join(srcs))
-                LOG.info(f"Created source file {src_file}")
+                src_file.write_text("\n".join(srcs), encoding="utf-8")
+                LOG.info("Created source file %s", src_file)
                 if n_fields > 1:
                     refs = [x[1] for x in lines]
-                    # tgt can be None
-                    if all(ref is None for ref in refs): # all tgt segs are None
+                    if all(ref is None for ref in refs):
                         LOG.info("Refs are missing")
-                    else: # no tgt seg is None
+                    else:
                         assert all(ref is not None for ref in refs), "Some references are None"
-                        ref_file.write_text("\n".join(refs))
-                        LOG.info(f"Created ref_file {ref_file}")
-                if n_fields > 2:  # src, tgt, meta
+                        ref_file.write_text("\n".join(refs), encoding="utf-8")
+                        LOG.info("Created ref file %s", ref_file)
+                if n_fields > 2:
                     meta = [x[2] for x in lines]
-                    meta_file.write_text("\n".join(meta))
-                    LOG.info(f"Created meta file {meta_file}")
+                    meta_file.write_text("\n".join(meta), encoding="utf-8")
+                    LOG.info("Created meta file %s", meta_file)
             else:
-                LOG.info(f"Unexpected line format {type(lines[0])} for {test_name} in {lang_pair}. str, List[str], or tuple[str] expected")
-
-
-def setup_model(work_dir: Path, cache_dir: Path, model_ids=TASK_CONF["models"]):
-    # downloads
-    work_dir = Path(work_dir)
-    models_dir = work_dir / "models"
-    models_dir.mkdir(parents=True, exist_ok=True)
-    for model_id in model_ids:
-        simple_name = model_id.split("/")[-1]
-        model_dir = models_dir / (simple_name + "-base")
-        model_dir.mkdir(parents=True, exist_ok=True)
-        flag_file = model_dir / "._OK"
-        if flag_file.exists():
-            LOG.info(f"Model {model_id} already exists; rm {flag_file} to force download")
-            continue
-
-        loader_args = dict(cache_dir=cache_dir)
-        tokenizer = AutoTokenizer.from_pretrained(model_id, **loader_args)
-        loader_args["device_map"] = "auto"
-        loader_args["torch_dtype"] = "auto"
-        LOG.info(f"Loading model from {model_id}; args: {loader_args}")
-        model = AutoModelForCausalLM.from_pretrained(model_id, **loader_args)
-        LOG.info(f"{model_id} loaded successfully. Storing at {model_dir}")
-        model_dir.mkdir(parents=True, exist_ok=True)
-        tokenizer.save_pretrained(model_dir)
-        model.save_pretrained(model_dir)
-
-        # copy baseline.py as run.py inside the model_dir
-        run_script = model_dir / "run.sh"
-        baseline_script = Path(__file__).parent / "run.sh"
-        assert baseline_script.exists(), f"Baseline script {baseline_script} does not exist"
-        run_script.write_text(baseline_script.read_text())
-
-        flag_file.touch()
-        LOG.info(f"Model {model_id} saved successfully at {model_dir}")
+                raise TypeError(f"Unexpected line format {type(lines[0])} for {test_name} in {lang_pair}")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Setup WMT25 shared task",
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description="Prepare WMT26 model-compression evaluation data",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
     parser.add_argument("-w", "--work", type=Path, default=WORK_DIR, help="Work directory")
     parser.add_argument("-l", "--langs", nargs="+", help="Language pairs to setup")
     parser.add_argument(
         "-t",
         "--task",
-        choices=["eval", "model", "all"],
-        default="all",
-        help="Task to perform",
+        choices=["eval"],
+        default="eval",
+        help="Compatibility option; root setup only prepares evaluation data",
     )
-    parser.add_argument("-c", "--cache", type=Path, default=HF_CACHE, help="Cache directory for models")
     args = parser.parse_args()
-
-    # dispatch based on task
-    if args.task in ("model", "all"):
-        setup_model(work_dir=args.work, cache_dir=args.cache)
-    if args.task in ("eval", "all"):
-        setup_eval(work_dir=args.work, langs=args.langs)
+    setup_eval(work_dir=args.work, langs=args.langs)
 
 
 if __name__ == "__main__":

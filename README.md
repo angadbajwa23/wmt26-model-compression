@@ -1,125 +1,144 @@
-# WMT25 Model Compression
+# WMT26 Model Compression
 
-This repository provides a baseline and a template submission for the WMT25
-Model Compression shared task. For task details, visit the [official
-page](https://www2.statmt.org/wmt25/model-compression.html).
+This repository contains organizer tooling, evaluation helpers, and organizer-provided example submissions for the [WMT26 Model Compression shared task](https://www2.statmt.org/wmt26/model-compression.html).
 
+The root of the repository is for organizers. Participant-style systems live under `submissions/`, and each submission directory is self-contained.
 
-## 1. Submission requirements
+## Task Summary
 
-A submission to the shared task requires both a Dockerfile and a Docker image
-containing all necessary software and model files for translation, following the
-requirements below.
+- Constrained track: compress `google/gemma-3-12b-it`.
+- Unconstrained track: use any original model below 20B parameters.
+- Language pairs: `ces-deu`, `eng-zho_Hans`, and `eng-ara_EG`.
+- Evaluation hardware: Ubuntu 24.04 on x86_64 with one NVIDIA H100 GPU up to 80 GB VRAM.
+- Evaluation criteria: translation quality, model size/on-disk and VRAM usage, and inference speed.
 
-- Include your team’s short name (no spaces) in both the Dockerfile and image
-  name, e.g.: `$Team-Dockerfile` and `$Team-dockerimage.tar`
+`google/gemma-3-12b-it` is gated on Hugging Face. Accept the Gemma terms and provide access through `HF_TOKEN`, `huggingface-cli login`, or an authorized cache before downloading the constrained baseline. Organizer submission setup scripts default to the shared model cache `/mnt/tg/data/projects/wmt26/model-compression/models` via `MODEL_CACHE`.
 
-- The image must contain a model directory at `/model/$submission_id` with all
-  required files (model, vocabulary, etc.). Please keep `$submission_id` short
-  as it will appear in reports.
+## Repository Layout
 
-- You may include additional files, but **do not** use any paths starting with
-  `/wmt`—these are reserved for the task evaluation.
+```text
+wmt26-model-compression/
+  modelzip/                 Organizer evaluation package
+  evals/                    Organizer sanity/evaluation scripts
+  submissions/              Runnable submissions
+    baseline/               Uncompressed Gemma baseline
+    bnb-q8/                 BitsAndBytes q8 baseline
+    bnb-q4/                 BitsAndBytes q4 baseline
+```
 
-- Each model directory must include a `run.sh` script with the following interface:
+Participant zip files should be extracted into `submissions/<submission-id>/`. Hugging Face model repositories can be added as submodules in the same location. The evaluator treats the submission directory itself as the runnable model path.
 
-    ```bash
-    /model/$submission_id/run.sh $lang_pair $batch_size < input.txt > output.txt
-    ```
-    - `$lang_pair`: Language pair in the format `eng-deu`
-    - `$batch_size`: Positive integer
-    - The script must run without accessing Internet.
+## Submission Contract
 
-To participate, fill the form mentioned in the official website, where you need to
-submit a public link to the Docker image online with its sha512sum sum.
+Each submission directory must include at least:
 
-### Example Usage
+```text
+setup.sh
+run.sh
+requirements.txt
+README.md
+```
+
+`setup.sh` prepares that submission's environment for inference only. The submitted or pre-compressed model artifact should already be present in the submission directory, usually at `workdir/model`, or `run.sh` should honor `MODEL_DIR`. It should not prepare evaluation data; root organizer tooling does that.
+
+`compress.sh` may be included as an optional reproducibility recipe for creating the submitted model artifact. Organizers do not need it to run inference.
+
+Organizer-provided submissions install the shared `modelzip` helper package into their own `.venv` with:
 
 ```bash
-image_name="$(docker load -i ${image_file_path} | cut -d ' ' -f 3)"
-container_id="$(docker run -itd ${opt_memory} --memory-swap=0 ${image_name} bash)"
-(time docker exec -i "${container_id}" /model/$submission_id/run.sh $lang_pair $batch_size < input.txt > output.txt 2> stderr.txt)
+uv pip install --no-deps -e <organizer-repo-root>
 ```
 
-## 2. Baseline
+That package provides stable submission-facing utilities such as language-pair normalization, language names, prompt helpers, and line-oriented input/output validation. It is installed into each submission environment. Set `MODELZIP_SOURCE` only when the default local repo discovery is not enough. The value may be a local repo directory, wheel path, git URL, or package spec; local directories are installed editable.
 
-### Setup
-
-1. Installation
-```bash
-pip install -e .
-```
-
-2. (Optional) Hugging Face Login
-```bash
-huggingface-cli login
-```
-*Required for gated models (e.g., [aya-expanse-8b](https://huggingface.co/CohereLabs/aya-expanse-8b)).*
-
-3. Download Models & Test Sets
+`run.sh` is the official inference entry point:
 
 ```bash
-python -m modelzip.setup
+bash run.sh \
+  --lang-pair ces-deu \
+  --batch-size 8 \
+  --input input.txt \
+  --output output.txt
 ```
 
-This command will create the following
-**Directory Structure:**
-```
-workdir/
-├── models/
-│   └── aya-expanse-8b-base
-└── tests/
-  ├── ces-deu/
-  └── jpn-zho/
-```
-*Note: Test sets here are for development only. Official evaluation will use different data.*
+The script must produce exactly one output line for each input line. Logs and progress bars must go to stderr or separate files, never into the output file.
 
----
-### Compression Demo
+The compatibility positional form is allowed but not required:
 
 ```bash
-python -m modelzip.compress
+bash run.sh ces-deu 8 < input.txt > output.txt
 ```
 
-This command will create two baselines in addition to the base aya model.
-The compressed models are saved in `workdir/models/`.
+## Organizer Setup
 
-### Running Baselines
+Install root evaluation tools from the repository root:
 
 ```bash
-for m in workdir/models/aya-expanse-8b-*; do
-  python -m modelzip.evaluate -m $m
-done
-
-python -m modelzip.report
+python -m pip install -e .
 ```
 
-**Sample Output:**
-```
-wmt19.ces-deu.deu.aya-expanse-8b.base.out.chrf      54.5
-wmt19.ces-deu.deu.aya-expanse-8b.bnb-4bit.out.chrf  54.2
-wmt19.ces-deu.deu.aya-expanse-8b.bnb-8bit.out.chrf  54.5
-wmt24.jpn-zho.zho.aya-expanse-8b.base.out.chrf      24.4
-...
-```
-
-## 3. Submission preparation
-
-See `Dockerfile` for an example. You can use [modelzip/baseline.py](modelzip/baseline.py)
-as a template to create your `run.py` script that uses the compressed model to
-translate the input. Specifically, you just need to implement your own version
-of the `LLMWrapper` class. Then you can simply add a `run.sh` file containing:
+Prepare development/evaluation data:
 
 ```bash
-python run.py $1 $2 <&0 >&1
+python -m modelzip.setup --work workdir --langs ces-deu eng-zho_Hans eng-ara_EG
 ```
 
-Once everything is ready, you can create a Docker image (in this case we name
-it `wmt2025_modelcompression`, but you can chose your preferred name) with:
-```bash
-docker build -t wmt2025_modelcompression .
+Until WMT26 test data is released, this repo uses the WMT25 General MT blindset for local smoke/speed testing:
+
+```text
+https://data.statmt.org/wmt25/general-mt/wmt25.jsonl
 ```
-Then, the image can be stored in a `tar` file with:
+
+That file is source-only. It is suitable for setup, inference, line-count validation, and speed testing. For local reference-based scoring, the loader also supports WMT25 post-task reference records with either `refs.refA.ref` or `tgt_text.refA`.
+
+## Running Submissions
+
+Set up one organizer baseline submission:
+
 ```bash
-docker save --output $DOCKER_IMAGE_FILENAME.tar wmt2025_modelcompression
+bash submissions/baseline/setup.sh
 ```
+
+Run a sanity check on one submission:
+
+```bash
+CUDA_VISIBLE_DEVICES=3 bash evals/sanitycheck.sh submissions/baseline
+```
+
+Run sanity checks on all discoverable submissions:
+
+```bash
+CUDA_VISIBLE_DEVICES=3 bash evals/sanitycheck.sh
+```
+
+Run a local chrF warmup evaluation:
+
+```bash
+python -m modelzip.evaluate \
+  --work workdir \
+  --model submissions/baseline \
+  --langs ces-deu \
+  --test-names warmup \
+  --metrics chrf \
+  --batch 1
+```
+
+Run the organizer evaluation wrapper over all submissions:
+
+```bash
+CUDA_VISIBLE_DEVICES=3 bash evals/evaluate.sh
+```
+
+Submission `run.sh` scripts should respect the caller's `CUDA_VISIBLE_DEVICES` and must not overwrite it. To fan out organizer evaluation jobs over multiple GPUs with GNU Parallel, set `PARALLEL_JOBS` and optionally `GPU_IDS`:
+
+```bash
+PARALLEL_JOBS=8 GPU_IDS=0,1,2,3,4,5,6,7 bash evals/evaluate.sh
+```
+
+If `GPU_IDS` is omitted, the wrapper uses `0..PARALLEL_JOBS-1`. Setup still runs once per submission before parallel evaluation starts.
+
+## Organizer Baselines
+
+`baseline` is the uncompressed Gemma 3 12B baseline using PyTorch and Transformers.
+
+`bnb-q8` and `bnb-q4` are simple BitsAndBytes memory/compression baselines. They are useful reference points, but they are not necessarily the fastest H100 inference route. Engine-native variants such as vLLM AWQ/GPTQ/FP8 or TensorRT-LLM INT4/FP8 should be represented as separate submission directories.

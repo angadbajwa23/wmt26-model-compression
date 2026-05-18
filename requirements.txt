@@ -1,22 +1,6 @@
-# already installed in docker
-#--extra-index-url "https://download.pytorch.org/whl/cu126"
-torch==2.7.0
-
-# @TG: transformer versions are trickly. You have to get the right version
-#transformers==4.46.3
-#tokenizers==0.20.3
-transformers==4.51.1
-tokenizers==0.21.4 
-
-accelerate==1.6.0
-
 # testsets and metrics
 sacrebleu==2.5.1
-mtdata[hf]==0.4.3
 pymarian==1.12.31
-
-# baseline
-bitsandbytes==0.45.3
 
 # gpu utilization monitoring
 nvitop

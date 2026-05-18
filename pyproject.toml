@@ -6,18 +6,18 @@ build-backend = "setuptools.build_meta"
 name = "modelzip"
 # version = "0.1.0"
 dynamic = ["version", "dependencies"]
-description = "Model Compression for WMT 2025"
+description = "Organizer evaluation tools for WMT 2026 Model Compression"
 authors = [
-    { name="WMT25 Organizers", email="nomail@example.com"}
+    { name="WMT26 Model Compression Organizers", email="nomail@example.com"}
     # contant: { name="Thamme Gowda", email="tgowdan@microsoft.com" },
 ]
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 
 
 [project.urls]
-Homepage = "https://github.com/thammegowda/wmt25-model-compression"
-Repository = "https://github.com/thammegowda/wmt25-model-compression"
+Homepage = "https://www2.statmt.org/wmt26/model-compression.html"
+Repository = "https://github.com/thammegowda/wmt26-model-compression"
 
 [tool.setuptools.dynamic]
 version = {attr = "modelzip.__version__"}

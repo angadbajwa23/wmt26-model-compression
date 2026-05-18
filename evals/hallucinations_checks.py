@@ -66,7 +66,7 @@ def find_langpair_dirs(eval_dir_path: str, lang_pair: str) -> List[str]:
 def parse_outfiles(langpair_path: str, source_lang: str, tgt_lang: str, model_name: str) -> List[OutputFile]:
     files = []
     OUTFILE_RE = re.compile(
-        r"^wmt25\." + f"{source_lang}-{tgt_lang}\.{tgt_lang}" + "\.([A-Za-z0-9_\-\.]+)\.out\.batch(\d+)\.run(\d+)$"
+        rf"^wmt25\.{source_lang}-{tgt_lang}\.{tgt_lang}\.([A-Za-z0-9_\-.]+)\.out\.batch(\d+)\.run(\d+)$"
     )
     for name in os.listdir(langpair_path):
         m = OUTFILE_RE.match(name)

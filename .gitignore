@@ -1,12 +1,10 @@
 workdir
 tmp/
+wmt25.jsonl
 *.bak
 .vscode/
 
 .history
-# azure
-.amltconfig
-.amltignore
 *~
 *.egg-info/
 *.egg

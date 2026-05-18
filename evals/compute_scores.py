@@ -131,11 +131,11 @@ def parse_outfiles(
         run_id: Optional[int] = None) -> List[OutputFile]:
     files = []
     if run_id is None:
-        run_regex = "run(\d+)"
+        run_regex = r"run(\d+)"
     else:
         run_regex = f"run{run_id}"
     OUTFILE_RE = re.compile(
-        r"^wmt25\." + f"{source_lang}-{tgt_lang}\.{tgt_lang}" + f"\.([A-Za-z0-9_\-\.]+)\.out\.batch(\d+)\.{run_regex}$"
+        rf"^wmt25\.{source_lang}-{tgt_lang}\.{tgt_lang}\.([A-Za-z0-9_\-.]+)\.out\.batch(\d+)\.{run_regex}$"
     )
     for name in os.listdir(langpair_path):
         m = OUTFILE_RE.match(name)
