@@ -18,13 +18,15 @@ import shutil
 import time, resource
 
 DEF_SHOW_PROGRESS = False
+PYMARIAN_CACHE = os.getenv("PYMARIAN_CACHE", "/mnt/tg/data/cache/marian/metric")
+PYMARIAN_EXTRA = os.getenv("PYMARIAN_EXTRA", "-c 16")  # default: CPU threads (GPU fused attention NaN on H100)
 
 
 def get_score(src_file: Path, out_file: Path, ref_file: Path, metric: str):
     if metric == "chrf":
         cmd = f"sacrebleu {ref_file} -i {out_file} -m {metric} -b -lc"
     else:
-        cmd = f"pymarian-eval -m {metric} -r {ref_file} -t {out_file} -s {src_file} -a only"
+        cmd = f"pymarian-eval --cache {PYMARIAN_CACHE} {PYMARIAN_EXTRA} -m {metric} -r {ref_file} -t {out_file} -s {src_file} -a only"
     LOG.info(f"Scoring: {cmd}")
     return sp.check_output(cmd, shell=True, text=True).strip()
 

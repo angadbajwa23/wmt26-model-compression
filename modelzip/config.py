@@ -2,7 +2,7 @@ import logging as LOG
 import os
 from pathlib import Path
 
-from .data import CmdGetter, Wmt25BlindData, Wmt25ReferenceData, WmtJsonlData
+from .data import CmdGetter, LocalParagraphData, Wmt25BlindData, Wmt25ReferenceData, WmtJsonlData
 from .submission import DEF_BATCH_SIZE, DEF_LANG_PAIRS, LANG_PAIR_ALIASES, normalize_lang_pair
 
 
@@ -18,20 +18,25 @@ WMT25_BLIND_URL = os.getenv("MODELZIP_WMT25_BLIND_URL", Wmt25BlindData.URL)
 WMT25_REF_URL = os.getenv("MODELZIP_WMT25_REF_URL", Wmt25ReferenceData.URL)
 WMT26_DATA_URL = os.getenv("MODELZIP_WMT26_DATA_URL", "")
 
+DATA_DIR = Path(os.getenv("MODELZIP_DATA_DIR", "data/wmt25"))
+
 TASK_CONF = {
     "langs": {
         "ces-deu": {
             "warmup": CmdGetter("printf 'ahoj světe\tHallo Welt\n'"),
+            "wmt25": LocalParagraphData(DATA_DIR / "wmt25.cs-de_DE.paragraphs.jsonl"),
             "wmt25-blind": Wmt25BlindData("cs-de_DE", url=WMT25_BLIND_URL),
             "wmt25-ref": Wmt25ReferenceData("cs-de_DE", url=WMT25_REF_URL),
         },
         "eng-zho_Hans": {
             "warmup": CmdGetter("printf 'hello world\t你好，世界\n'"),
+            "wmt25": LocalParagraphData(DATA_DIR / "wmt25.en-zh_CN.paragraphs.jsonl"),
             "wmt25-blind": Wmt25BlindData("en-zh_CN", url=WMT25_BLIND_URL),
             "wmt25-ref": Wmt25ReferenceData("en-zh_CN", url=WMT25_REF_URL),
         },
         "eng-ara_EG": {
             "warmup": CmdGetter("printf 'hello world\tمرحبا بالعالم\n'"),
+            "wmt25": LocalParagraphData(DATA_DIR / "wmt25.en-ar_EG.paragraphs.jsonl"),
             "wmt25-blind": Wmt25BlindData("en-ar_EG", url=WMT25_BLIND_URL),
             "wmt25-ref": Wmt25ReferenceData("en-ar_EG", url=WMT25_REF_URL),
         },

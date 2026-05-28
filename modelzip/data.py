@@ -108,3 +108,31 @@ class Wmt25ReferenceData(WmtJsonlData):
 
     def __init__(self, pair: str, url: str | None = None):
         super().__init__(pair=pair, url=url or self.URL, cache_name="wmt25-genmt.jsonl")
+
+
+@dataclass
+class LocalParagraphData:
+    """Read pre-split paragraph-level JSONL files (doc_id, paragraph_id, src_text, refs)."""
+
+    path: str | Path
+
+    def __call__(self) -> list[list[str | None]]:
+        path = Path(self.path)
+        if not path.exists():
+            raise FileNotFoundError(f"Local data file not found: {path}")
+        rows = []
+        with open(path, "r", encoding="utf-8") as fh:
+            for line in fh:
+                if not line.strip():
+                    continue
+                rec = json.loads(line)
+                src = rec["src_text"].replace("\n", " ").strip()
+                refs = rec.get("refs") or {}
+                ref = refs.get("refA")
+                if isinstance(ref, dict):
+                    ref = ref.get("ref")
+                if isinstance(ref, str):
+                    ref = ref.replace("\n", " ").strip()
+                meta = f"{rec['doc_id']}\t{rec.get('paragraph_id', 0)}"
+                rows.append([src, ref, meta])
+        return rows

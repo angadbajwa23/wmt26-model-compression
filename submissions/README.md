@@ -1,6 +1,10 @@
 # Submissions
 
-Each directory here is a self-contained WMT26 Model Compression submission. Participant zip archives should be extracted here, and Hugging Face submission repositories can be added here as submodules.
+Each subdirectory in `submissions/` is a self-contained submission to the WMT26 Model Compression shared task.
+
+## Setup
+
+To start a new submission, copy one of the existing baselines (`baseline`, `bnb-q8`, or `bnb-q4`) into a new directory and replace the requirements, setup, model artifact, and inference code as needed. Participant zip archives should be extracted into their own directory; Hugging Face submission repositories can be added there as submodules. 
 
 A submission directory must contain:
 
@@ -11,30 +15,32 @@ requirements.txt
 README.md
 ```
 
-`setup.sh` prepares that submission's runtime environment for inference only. The submitted or pre-compressed model artifact should already be present in the submission directory, usually at `workdir/model`, or `run.sh` should honor `MODEL_DIR`.
+`setup.sh` prepares the submission's runtime environment for inference only, inlucding setting up its own venv. The submitted or pre-compressed model artifact should already be present, usually at `workdir/model`; otherwise `run.sh` must honor `MODEL_DIR`.
 
-`compress.sh` is optional. It is not part of the evaluation contract; it is a documentation/reproducibility recipe for generating the submitted model artifact from a base model.
-
-Submissions may use organizer-provided shared helpers from `modelzip.submission` for language names, language-pair aliases, prompt formatting, line-oriented input/output, and base classes for Python-based inference. Use `LLMBase` for generic causal language models and `Gemma3LLMBase` for Gemma 3 submissions. Install those helpers into the submission venv during `setup.sh`. The organizer examples do this with an editable, no-dependency install from the repository root:
+To set up and rerun a baseline or submission:
 
 ```bash
-uv pip install --no-deps -e <organizer-repo-root>
+cd submissions/<name>
+bash setup.sh
+bash run.sh --lang-pair ces-deu --batch-size 8 --input input.txt --output output.txt
 ```
 
-For standalone submission repositories, set `MODELZIP_SOURCE` before running `setup.sh`. The value may be a local repo directory, wheel path, git URL, or package spec; local directories are installed editable.
+Submissions may use helpers from `modelzip.submission` for language-pair normalization, prompt formatting, line-oriented I/O, and Python inference base classes. Install those helpers into the submission venv during `setup.sh`; the baseline scripts demonstrate the editable install. For standalone repositories, set `MODELZIP_SOURCE` before running `setup.sh`.
 
-`run.sh` is the evaluator entry point. The official interface is:
+`run.sh` is the evaluator entry point and must support the following options:
 
 ```bash
 bash run.sh --lang-pair ces-deu --batch-size 8 --input input.txt --output output.txt
 ```
 
-The script must write exactly one output line for each input line. Logs, progress bars, and diagnostics must go to stderr or separate files, never into the output file.
+The script must write exactly one output line for each input line. Logs, progress bars, and diagnostics must go to stderr or separate files. The evaluator may launch multiple `run.sh` processes in parallel and assign GPUs with `CUDA_VISIBLE_DEVICES`; submission scripts must respect the inherited value.
 
-The evaluator may launch multiple `run.sh` processes in parallel and assign GPUs with `CUDA_VISIBLE_DEVICES`. A submission script must respect the inherited value and should not set or overwrite it internally.
+## Baselines
 
 Organizer-provided examples:
 
 - `baseline`: uncompressed Gemma 3 12B baseline.
 - `bnb-q8`: BitsAndBytes q8 baseline.
 - `bnb-q4`: BitsAndBytes q4 baseline.
+
+See individual `README.md` files for more details.
