@@ -25,3 +25,4 @@ eggs/
 .eggs/
 .pytest_cache
 *.bak
+.claude/
