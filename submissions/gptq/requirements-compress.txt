@@ -1,0 +1,12 @@
+--extra-index-url https://download.pytorch.org/whl/cu128
+
+datasets>=2.14.0
+accelerate>=1.0.0
+
+# Pinned to match compressed-tensors==0.11.0, which is what vllm==0.11.0 (see
+# requirements.txt) requires in the inference venv. An unpinned/newer
+# llmcompressor pulls in a newer compressed-tensors whose QuantizationArgs
+# schema adds fields (e.g. scale_dtype, zp_dtype) that the older,
+# extra="forbid" schema in the inference venv rejects at model-load time.
+llmcompressor==0.7.1.3
+compressed-tensors==0.11.0

@@ -1,0 +1,5 @@
+/.venv/
+/.venv-compress/
+/workdir/
+__pycache__/
+*.py[cod]
