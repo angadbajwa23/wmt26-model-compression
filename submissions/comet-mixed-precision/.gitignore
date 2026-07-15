@@ -1,0 +1,5 @@
+/.venv/
+/workdir/
+__pycache__/
+*.py[cod]
+/sparse_logs/
