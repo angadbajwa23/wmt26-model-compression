@@ -17,7 +17,17 @@ LOG.basicConfig(level=LOG.INFO, format="%(asctime)s - %(levelname)s - %(message)
 
 
 class BnbQ4LLM(Gemma3LLMBase):
-    pass
+    @property
+    def tokenizer(self):
+        if self._tokenizer is None:
+            from transformers import AutoTokenizer
+            self._tokenizer = AutoTokenizer.from_pretrained(
+                self.model_dir, use_fast=True, local_files_only=True, fix_mistral_regex=True
+            )
+            self._tokenizer.padding_side = "left"
+            if self._tokenizer.pad_token is None and self._tokenizer.eos_token is not None:
+                self._tokenizer.pad_token = self._tokenizer.eos_token
+        return self._tokenizer
 
 
 def main():

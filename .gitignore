@@ -4,6 +4,14 @@ wmt25.jsonl
 *.bak
 .vscode/
 
+# Submission-local virtualenvs (each is several GB; uv also drops its own
+# .gitignore inside these, but pin it explicitly so it doesn't depend on that)
+.venv/
+.venv-compress/
+
+# Large raw/intermediate corpora fetched by data_prep/ scripts -- do not commit
+/data/wmt26-train/
+
 .history
 *~
 *.egg-info/
