@@ -69,9 +69,9 @@ The compatibility positional form is allowed but not required:
 bash run.sh ces-deu 8 < input.txt > output.txt
 ```
 
-## Organizer Setup
+## Running Submissions
 
-Install root evaluation tools from the repository root:
+Install root tooling from the repository root:
 
 ```bash
 python -m pip install -e .
@@ -91,9 +91,7 @@ https://data.statmt.org/wmt25/general-mt/wmt25.jsonl
 
 That file is source-only. It is suitable for setup, inference, line-count validation, and speed testing. For local reference-based scoring, the loader also supports WMT25 post-task reference records with either `refs.refA.ref` or `tgt_text.refA`.
 
-## Running Submissions
-
-Set up one organizer baseline submission:
+Set up a submission (repeat per submission you want to run):
 
 ```bash
 bash submissions/baseline/setup.sh

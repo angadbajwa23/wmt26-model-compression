@@ -41,6 +41,7 @@ if [[ -f "$model_dir/config.json" ]]; then
     echo "Model already present at $model_dir, skipping download"
 else
     echo "Downloading model artifact: $hf_repo -> $model_dir"
+    export HF_HUB_DISABLE_XET="1"
     "$inference_venv/bin/python" - "$hf_repo" "$model_dir" <<'PYEOF'
 import sys
 from huggingface_hub import snapshot_download
