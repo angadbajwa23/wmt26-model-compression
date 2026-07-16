@@ -4,7 +4,19 @@ Each subdirectory in `submissions/` is a self-contained submission to the WMT26 
 
 ## Setup
 
-To start a new submission, copy one of the existing baselines (`baseline`, `bnb-q8`, or `bnb-q4`) into a new directory and replace the requirements, setup, model artifact, and inference code as needed. Participant zip archives should be extracted into their own directory; Hugging Face submission repositories can be added there as submodules. 
+Install root tooling from the repository root:
+
+```bash
+python -m pip install -e .
+```
+
+Prepare development/evaluation data:
+
+```bash
+python -m modelzip.setup --work workdir --langs ces-deu eng-zho_Hans eng-ara_EG
+```
+
+To start a new submission, copy one of the existing baselines (`../organizer_submissions/baseline`, `bnb-q8`, or `bnb-q4`) into a new directory here and replace the requirements, setup, model artifact, and inference code as needed. Participant zip archives should be extracted into their own directory; Hugging Face submission repositories can be added there as submodules. 
 
 A submission directory must contain:
 
@@ -15,7 +27,7 @@ requirements.txt
 README.md
 ```
 
-`setup.sh` prepares the submission's runtime environment for inference only, inlucding setting up its own venv. The submitted or pre-compressed model artifact should already be present, usually at `workdir/model`; otherwise `run.sh` must honor `MODEL_DIR`.
+`setup.sh` prepares the submission's runtime environment for inference only, inlucding setting up its own venv. The submitted or pre-compressed model artifact should already be present, usually at `workdir/model`; otherwise `run.sh` must honor `MODEL_DIR`. For each of this team's three submissions, `setup.sh` also downloads that submission's pre-quantized model artifact from Hugging Face directly into its own `workdir/model` (override the source repo with `HF_MODEL_REPO`, or the destination with `MODEL_DIR`).
 
 To set up and rerun a baseline or submission:
 
@@ -35,12 +47,16 @@ bash run.sh --lang-pair ces-deu --batch-size 8 --input input.txt --output output
 
 The script must write exactly one output line for each input line. Logs, progress bars, and diagnostics must go to stderr or separate files. The evaluator may launch multiple `run.sh` processes in parallel and assign GPUs with `CUDA_VISIBLE_DEVICES`; submission scripts must respect the inherited value.
 
-## Baselines
+## Submissions
 
-Organizer-provided examples:
+This directory contains this team's three submissions, all quantizing `google/gemma-3-12b-it`:
 
-- `baseline`: uncompressed Gemma 3 12B baseline.
-- `bnb-q8`: BitsAndBytes q8 baseline.
-- `bnb-q4`: BitsAndBytes q4 baseline.
+- [`gptq`](gptq/README.md): Uniform INT4 (W4A16_ASYM) via GPTQ's Hessian-corrected column-wise quantization.
+- [`awq`](awq/README.md): Uniform INT4 (W4A16_ASYM) via AWQ's activation-aware channel scaling.
+- [`comet-mixed-precision`](comet-mixed-precision/README.md): Per-layer BF16/INT8/INT4 mix chosen by
+  COMET-sensitivity-guided budget allocation, quantized in one GPTQ pass.
+
+Best-performing submission by language pair: `comet-mixed-precision` for `ces-deu` and `eng-zho_Hans`;
+`gptq` for `eng-ara_EG`.
 
 See individual `README.md` files for more details.
