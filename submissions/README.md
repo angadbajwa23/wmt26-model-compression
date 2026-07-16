@@ -27,7 +27,7 @@ requirements.txt
 README.md
 ```
 
-`setup.sh` prepares the submission's runtime environment for inference only, inlucding setting up its own venv. The submitted or pre-compressed model artifact should already be present, usually at `workdir/model`; otherwise `run.sh` must honor `MODEL_DIR`. For each of this team's three submissions, `setup.sh` also downloads that submission's pre-quantized model artifact from Hugging Face directly into its own `workdir/model` (override the source repo with `HF_MODEL_REPO`, or the destination with `MODEL_DIR`).
+`setup.sh` prepares the submission's runtime environment for inference and also downloads that submission's quantized model artifact from Hugging Face directly into its own `workdir/model` 
 
 To set up and rerun a baseline or submission:
 
