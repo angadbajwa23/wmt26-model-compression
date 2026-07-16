@@ -4,6 +4,12 @@ Each subdirectory in `submissions/` is a self-contained submission to the WMT26 
 
 ## Setup
 
+Install all requirements  in repository root:
+
+```bash
+pip install -r requirements.txt
+```
+
 Install root tooling from the repository root:
 
 ```bash
